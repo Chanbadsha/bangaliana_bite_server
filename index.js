@@ -34,6 +34,45 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    //   Database name
+    const userCollection = client.db("BangalianaBite").collection("users");
+    const cartCollection = client.db("BangalianaBite").collection("carts");
+
+    // User Related APIs
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // Carts related APIs
+    app.post("/carts", async (req, res) => {
+      const cart = req.body;
+      // Check if the product already exists in the user's cart
+      const userInfo = {
+        customerEmail: cart.customerEmail,
+        productId: cart.productId,
+      };
+      const existingCartItem = await cartCollection.findOne(userInfo);
+
+      if (existingCartItem) {
+        res
+          .status(401)
+          .send({ message: "This item already added to the cart" });
+        return;
+      }
+      const result = await cartCollection.insertOne(cart);
+      res.send(result);
+    });
+
+    app.get("/cart", async (req, res) => {
+      const email = req.query.email;
+      const query = { userEmail: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -41,7 +80,7 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
